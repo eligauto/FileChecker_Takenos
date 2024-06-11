@@ -1,26 +1,23 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
-import { Multer } from 'multer';
-import axios from 'axios';
+import { Injectable, Inject } from '@nestjs/common';
+import { v2 as cloudinary } from 'cloudinary';
+import { MulterFile } from './interfaces/multer.interface';
 
 @Injectable()
 export class FilesService {
+  constructor(@Inject('Cloudinary') private cloudinary) {}
 
-  async uploadFile(file: Multer.File): Promise<any> {
-    const uploadUrl = process.env.UPLOADTHING_URL;
-    console.log('uploadUrl', uploadUrl)
-    try {
-      const response = await axios.post(uploadUrl, file.buffer, {
-        headers: {
-          'Content-Type': file.mimetype,
-        },
-      });
-      console.log('response', response)
-      return response.data;
-    } catch (error) {
-      throw new BadRequestException('Error uploading file: ' + error.message);
-    }
+  async uploadFile(file: MulterFile): Promise<string> {
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload_stream({ resource_type: 'auto' }, (error, result) => {
+        if (error) {
+          console.error('Error al subir el archivo a Cloudinary:', error);
+          reject(error);
+        } else {
+          resolve(result.secure_url);
+        }
+      }).end(file.buffer);
+    });
   }
 }
-
 
 
